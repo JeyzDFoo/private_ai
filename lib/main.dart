@@ -6,7 +6,12 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  MyApp({super.key});
+  List<ChatMessage> chathistory = [];
+
+  updateChatHistory(List<ChatMessage> messages) {
+    chathistory = messages;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,7 +20,20 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.purple,
       ),
-      home: ChatScreen(),
+      home: Scaffold(
+          appBar: AppBar(
+            title: Text('My Ai'),
+            actions: [
+              IconButton(
+                  onPressed: () {
+                    saveChat();
+                  },
+                  icon: Icon(Icons.save))
+            ],
+          ),
+          body: ChatScreen(updateHistory: updateChatHistory)),
     );
   }
+
+  void saveChat() {}
 }

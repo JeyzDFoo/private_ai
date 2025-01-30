@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key});
+  final Function updateHistory;
+  const ChatScreen({super.key, required this.updateHistory});
 
   @override
   ChatScreenState createState() => ChatScreenState();
@@ -144,64 +145,59 @@ class ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Private Chat'),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final message = _messages[index];
-                return ListTile(
-                  title: Text(
-                    message.content,
-                    textAlign: message.role == 'user'
-                        ? TextAlign.right
-                        : TextAlign.left,
-                  ),
-                  tileColor: message.role == 'user'
-                      ? Colors.purple[50]
-                      : Colors.blueGrey[200],
-                );
-              },
-            ),
-          ),
-          if (_isLoading) CircularProgressIndicator(),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    focusNode: _focusNode,
-                    decoration: InputDecoration(
-                      labelText: 'Type your message',
-                      border: OutlineInputBorder(),
-                    ),
-                    onChanged: (value) {
-                      _responseSubscription?.cancel();
-                      setState(() {
-                        _isLoading = false;
-                      });
-                    },
-                    onSubmitted: (value) => _sendMessage(value),
-                  ),
+    widget.updateHistory(_messages);
+    return Column(
+      children: [
+        Expanded(
+          child: ListView.builder(
+            controller: _scrollController,
+            itemCount: _messages.length,
+            itemBuilder: (context, index) {
+              final message = _messages[index];
+              return ListTile(
+                title: Text(
+                  message.content,
+                  textAlign:
+                      message.role == 'user' ? TextAlign.right : TextAlign.left,
                 ),
-                SizedBox(width: 8),
-                IconButton(
-                  icon: Icon(Icons.send),
-                  onPressed: () => _sendMessage(_controller.text),
-                ),
-              ],
-            ),
+                tileColor: message.role == 'user'
+                    ? Colors.purple[50]
+                    : Colors.blueGrey[200],
+              );
+            },
           ),
-        ],
-      ),
+        ),
+        if (_isLoading) CircularProgressIndicator(),
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _controller,
+                  focusNode: _focusNode,
+                  decoration: InputDecoration(
+                    labelText: 'Type your message',
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (value) {
+                    _responseSubscription?.cancel();
+                    setState(() {
+                      _isLoading = false;
+                    });
+                  },
+                  onSubmitted: (value) => _sendMessage(value),
+                ),
+              ),
+              SizedBox(width: 8),
+              IconButton(
+                icon: Icon(Icons.send),
+                onPressed: () => _sendMessage(_controller.text),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
