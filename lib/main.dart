@@ -57,7 +57,7 @@ class ChatScreenState extends State<ChatScreen> {
       );
       request.headers['Content-Type'] = 'application/json';
       request.body = jsonEncode({
-        'model': 'llama3.2',
+        'model': 'deepseek-r1:1.5b', //'llama3.2', //deepseek-r1:1.5b
         'messages': [
           {'role': 'user', 'content': content}
         ],
@@ -82,15 +82,22 @@ class ChatScreenState extends State<ChatScreen> {
             print('role: ${chatMessage.role}, content: ${chatMessage.content}');
             setState(() {
               if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
-                print('Adding to last message: ${_messages.last.content}');
                 _messages[_messages.length - 1] = ChatMessage(
                   role: 'assistant',
-                  content: '${_messages.last.content} ${chatMessage.content}',
+                  content: '${_messages.last.content}${chatMessage.content}',
                 );
               } else {
                 _messages.add(chatMessage);
               }
             });
+
+            // Scroll to the bottom after a new message is added
+            _scrollController.animateTo(
+              _scrollController.position.maxScrollExtent,
+              duration: Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+
             buffer.clear();
           }
         }
@@ -176,6 +183,8 @@ class ChatScreenState extends State<ChatScreen> {
                       labelText: 'Type your message',
                       border: OutlineInputBorder(),
                     ),
+                    onSubmitted: (value) =>
+                        _sendMessage(value), // Add this line
                   ),
                 ),
                 SizedBox(width: 8),
