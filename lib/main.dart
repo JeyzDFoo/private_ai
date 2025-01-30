@@ -36,6 +36,7 @@ int chatIndex = 0;
 class ChatScreenState extends State<ChatScreen> {
   final List<ChatMessage> _messages = [];
   final _controller = TextEditingController();
+  final _scrollController = ScrollController();
   bool _isLoading = false;
 
   void _sendMessage(String content) async {
@@ -96,6 +97,13 @@ class ChatScreenState extends State<ChatScreen> {
         setState(() {
           _isLoading = false;
         });
+
+        // Scroll to the bottom after a new message is added
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
       } else {
         print('Failed to get response from server: ${response.statusCode}');
         setState(() {
@@ -132,12 +140,13 @@ class ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Ollama Chat'),
+        title: Text('Private Chat'),
       ),
       body: Column(
         children: [
           Expanded(
             child: ListView.builder(
+              controller: _scrollController,
               itemCount: _messages.length,
               itemBuilder: (context, index) {
                 final message = _messages[index];
