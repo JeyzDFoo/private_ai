@@ -37,6 +37,7 @@ class ChatScreenState extends State<ChatScreen> {
   final List<ChatMessage> _messages = [];
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
+  final _focusNode = FocusNode(); // Add this line
   bool _isLoading = false;
 
   void _sendMessage(String content) async {
@@ -49,6 +50,7 @@ class ChatScreenState extends State<ChatScreen> {
     });
 
     _controller.clear();
+    _focusNode.requestFocus(); // Add this line
 
     try {
       final request = http.Request(
@@ -179,6 +181,7 @@ class ChatScreenState extends State<ChatScreen> {
                 Expanded(
                   child: TextField(
                     controller: _controller,
+                    focusNode: _focusNode, // Add this line
                     decoration: InputDecoration(
                       labelText: 'Type your message',
                       border: OutlineInputBorder(),
