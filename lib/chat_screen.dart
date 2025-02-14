@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:mac_desktop/chat_model.dart';
 
 class ChatScreen extends StatefulWidget {
   final Function updateHistory;
@@ -71,7 +72,6 @@ class ChatScreenState extends State<ChatScreen> {
               role: decodedChunk['message']['role'],
               content: decodedChunk['message']['content'],
             );
-            print('role: ${chatMessage.role}, content: ${chatMessage.content}');
             setState(() {
               if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
                 _messages[_messages.length - 1] = ChatMessage(
@@ -200,11 +200,4 @@ class ChatScreenState extends State<ChatScreen> {
       ],
     );
   }
-}
-
-class ChatMessage {
-  final String role;
-  final String content;
-
-  ChatMessage({required this.role, required this.content});
 }
