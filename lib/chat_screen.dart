@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:mac_desktop/chat_model.dart';
-import 'package:mac_desktop/chat_service.dart';
 import 'package:mac_desktop/disk_operations.dart';
 import 'package:mac_desktop/saved_chats_list.dart';
 import 'package:mac_desktop/chat_flow.dart'; // Add this import
@@ -17,7 +16,6 @@ class ChatScreenState extends State<ChatScreen> {
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
   final _focusNode = FocusNode();
-  bool _isLoading = false;
   StreamSubscription<String>? _responseSubscription;
   SavedChat currentChat = SavedChat(name: 'New Chat', messages: []);
   List<SavedChat> savedChats = [];
@@ -56,7 +54,7 @@ class ChatScreenState extends State<ChatScreen> {
     return Row(
       children: [
         SizedBox(
-          width: 400,
+          width: 350,
           child: SavedChatsList(
             loadChatHistory: _loadChatHistory,
           ),

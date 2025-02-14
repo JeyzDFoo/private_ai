@@ -12,6 +12,9 @@ class SavedChatsList extends StatefulWidget {
 }
 
 class _SavedChatsListState extends State<SavedChatsList> {
+  final TextEditingController _titleController = TextEditingController();
+  int? _selectedIndex; // Add this line
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -30,17 +33,31 @@ class _SavedChatsListState extends State<SavedChatsList> {
                   itemCount: savedChats.length,
                   itemBuilder: (context, index) {
                     final savedChat = savedChats[index];
+                    _titleController.text = savedChat.name;
                     return Padding(
                       padding: const EdgeInsets.all(2.0),
                       child: ListTile(
-                        tileColor: Colors.purple[50],
-                        title: Text(savedChat.name),
-                        onTap: () => widget.loadChatHistory(savedChat),
+                        tileColor: _selectedIndex == index
+                            ? Colors.blue[100]
+                            : Colors.purple[50], // Modify this line
+                        title: Row(
+                          children: [
+                            Text(savedChat.name),
+                          ],
+                        ),
+                        onTap: () {
+                          setState(() {
+                            _selectedIndex = index; // Add this line
+                          });
+                          widget.loadChatHistory(savedChat);
+                        },
                         trailing: IconButton(
                             onPressed: () async {
                               await deleteChat(savedChat);
                               setState(() {
                                 savedChats.remove(savedChat);
+                                if (_selectedIndex == index)
+                                  _selectedIndex = null; // Add this line
                               });
                             },
                             icon: HeroIcon(HeroIcons.trash)),
