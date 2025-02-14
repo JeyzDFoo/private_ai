@@ -1,13 +1,13 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:mac_desktop/chat_model.dart';
+import 'package:mac_desktop/chat_service.dart';
 
 class ChatScreen extends StatefulWidget {
+  final List<SavedChat> savedChats;
   final Function updateHistory;
-  const ChatScreen({super.key, required this.updateHistory});
+  const ChatScreen(
+      {super.key, required this.updateHistory, required this.savedChats});
 
   @override
   ChatScreenState createState() => ChatScreenState();
@@ -32,106 +32,43 @@ class ChatScreenState extends State<ChatScreen> {
     _controller.clear();
     _focusNode.requestFocus();
 
-    setState(() {
-      _isLoading = false;
-    });
-
     try {
-      final request = http.Request(
-        'POST',
-        Uri.parse('http://localhost:11434/api/chat'),
-      );
-      request.headers['Content-Type'] = 'application/json';
-
-      // Include the previous messages in the request body
-      final messages = _messages
-          .map((msg) => {
-                'role': msg.role,
-                'content': msg.content,
-              })
-          .toList();
-
-      request.body = jsonEncode({
-        'model': 'llama3.2', //'deepseek-r1:1.5b',
-        'messages': messages,
-      });
-
-      final response = await request.send();
-
-      print('Response status: ${response.statusCode}');
-
-      if (response.statusCode == 200) {
-        final responseStream = response.stream.transform(utf8.decoder);
-        StringBuffer buffer = StringBuffer();
-
-        _responseSubscription = responseStream.listen((chunk) {
-          buffer.write(chunk);
-          final decodedChunk = jsonDecode(buffer.toString());
-          if (decodedChunk is Map) {
-            final chatMessage = ChatMessage(
-              role: decodedChunk['message']['role'],
-              content: decodedChunk['message']['content'],
-            );
-            setState(() {
-              if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
-                _messages[_messages.length - 1] = ChatMessage(
-                  role: 'assistant',
-                  content: '${_messages.last.content}${chatMessage.content}',
-                );
-              } else {
-                _messages.add(chatMessage);
-              }
-            });
-
-            _scrollController.animateTo(
-              _scrollController.position.maxScrollExtent,
-              duration: Duration(milliseconds: 300),
-              curve: Curves.easeOut,
-            );
-
-            buffer.clear();
-          }
-        }, onDone: () {
-          setState(() {
-            _isLoading = false;
-          });
-
-          _scrollController.animateTo(
-            _scrollController.position.maxScrollExtent,
-            duration: Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
-        });
-      } else {
-        print('Failed to get response from server: ${response.statusCode}');
+      await sendMessageToServer(content, _messages, _scrollController,
+          (chatMessage) {
         setState(() {
-          _isLoading = false;
+          if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
+            _messages[_messages.length - 1] = ChatMessage(
+              role: 'assistant',
+              content: '${_messages.last.content}${chatMessage.content}',
+            );
+          } else {
+            _messages.add(chatMessage);
+          }
         });
-      }
-    } on SocketException catch (e) {
-      print('SocketException: $e');
+
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      });
+
       setState(() {
         _isLoading = false;
       });
-      return;
-    } on http.ClientException catch (e) {
-      print('ClientException: $e');
-      setState(() {
-        _isLoading = false;
-      });
-      return;
-    } on FormatException catch (e) {
-      print('FormatException: $e');
-      setState(() {
-        _isLoading = false;
-      });
-      return;
     } catch (e) {
-      print('Unexpected error: $e');
+      print('Error: $e');
       setState(() {
         _isLoading = false;
       });
     }
+  }
+
+  void _loadChatHistory(SavedChat savedChat) {
+    setState(() {
+      _messages.clear();
+      _messages.addAll(savedChat.messages);
+    });
   }
 
   @override
@@ -146,53 +83,80 @@ class ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     widget.updateHistory(_messages);
-    return Column(
+    return Row(
       children: [
-        Expanded(
-          child: ListView.builder(
-            controller: _scrollController,
-            itemCount: _messages.length,
-            itemBuilder: (context, index) {
-              final message = _messages[index];
-              return ListTile(
-                title: Text(
-                  message.content,
-                  textAlign:
-                      message.role == 'user' ? TextAlign.right : TextAlign.left,
-                ),
-                tileColor: message.role == 'user'
-                    ? Colors.purple[50]
-                    : Colors.blueGrey[200],
-              );
-            },
-          ),
-        ),
-        if (_isLoading) CircularProgressIndicator(),
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Row(
+        Flexible(
+          flex: 1,
+          child: Column(
             children: [
               Expanded(
-                child: TextField(
-                  controller: _controller,
-                  focusNode: _focusNode,
-                  decoration: InputDecoration(
-                    labelText: 'Type your message',
-                    border: OutlineInputBorder(),
-                  ),
-                  onChanged: (value) {
-                    _responseSubscription?.cancel();
-                    setState(() {
-                      _isLoading = false;
-                    });
+                child: ListView.builder(
+                  itemCount: widget.savedChats.length,
+                  itemBuilder: (context, index) {
+                    final savedChat = widget.savedChats[index];
+                    return ListTile(
+                      title: Text(savedChat.name),
+                      onTap: () => _loadChatHistory(savedChat),
+                    );
                   },
-                  onSubmitted: (value) => _sendMessage(value),
                 ),
               ),
-              SizedBox(width: 8),
-              IconButton(
-                icon: Icon(Icons.send),
-                onPressed: () => _sendMessage(_controller.text),
+            ],
+          ),
+        ),
+        Flexible(
+          flex: 4,
+          child: Column(
+            children: [
+              Expanded(
+                child: ListView.builder(
+                  controller: _scrollController,
+                  itemCount: _messages.length,
+                  itemBuilder: (context, index) {
+                    final message = _messages[index];
+                    return ListTile(
+                      title: Text(
+                        message.content,
+                        textAlign: message.role == 'user'
+                            ? TextAlign.right
+                            : TextAlign.left,
+                      ),
+                      tileColor: message.role == 'user'
+                          ? Colors.purple[50]
+                          : Colors.blueGrey[200],
+                    );
+                  },
+                ),
+              ),
+              if (_isLoading) CircularProgressIndicator(),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _controller,
+                        focusNode: _focusNode,
+                        decoration: InputDecoration(
+                          labelText: 'Type your message',
+                          border: OutlineInputBorder(),
+                        ),
+                        onChanged: (value) {
+                          _responseSubscription?.cancel();
+                          setState(() {
+                            _isLoading = false;
+                          });
+                        },
+                        onSubmitted: (value) => _sendMessage(value),
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    IconButton(
+                      icon: Icon(Icons.send),
+                      onPressed: () => _sendMessage(_controller.text),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),

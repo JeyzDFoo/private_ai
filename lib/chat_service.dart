@@ -1,48 +1,53 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:mac_desktop/chat_model.dart';
 
-Future<Stream<String>?> sendMessageToServer(List<ChatMessage> messages) async {
-  try {
-    final request = http.Request(
-      'POST',
-      Uri.parse('http://localhost:11434/api/chat'),
-    );
-    request.headers['Content-Type'] = 'application/json';
+Future<void> sendMessageToServer(
+  String content,
+  List<ChatMessage> messages,
+  ScrollController scrollController,
+  Function(ChatMessage) onMessageReceived,
+) async {
+  final request = http.Request(
+    'POST',
+    Uri.parse('http://localhost:11434/api/chat'),
+  );
+  request.headers['Content-Type'] = 'application/json';
 
-    final messageList = messages
-        .map((msg) => {
-              'role': msg.role,
-              'content': msg.content,
-            })
-        .toList();
+  final messageList = messages
+      .map((msg) => {
+            'role': msg.role,
+            'content': msg.content,
+          })
+      .toList();
 
-    request.body = jsonEncode({
-      'model': 'llama3.2',
-      'messages': messageList,
-    });
+  request.body = jsonEncode({
+    'model': 'llama3.2',
+    'messages': messageList,
+  });
 
-    final response = await request.send();
+  final response = await request.send();
 
-    if (response.statusCode == 200) {
-      return response.stream.transform(utf8.decoder);
-    } else {
-      print('Failed to get response from server: ${response.statusCode}');
-      return null;
+  if (response.statusCode == 200) {
+    final responseStream = response.stream.transform(utf8.decoder);
+    StringBuffer buffer = StringBuffer();
+
+    await for (var chunk in responseStream) {
+      buffer.write(chunk);
+      final decodedChunk = jsonDecode(buffer.toString());
+      if (decodedChunk is Map) {
+        final chatMessage = ChatMessage(
+          role: decodedChunk['message']['role'],
+          content: decodedChunk['message']['content'],
+        );
+        onMessageReceived(chatMessage);
+        buffer.clear();
+      }
     }
-  } on SocketException catch (e) {
-    print('SocketException: $e');
-    return null;
-  } on http.ClientException catch (e) {
-    print('ClientException: $e');
-    return null;
-  } on FormatException catch (e) {
-    print('FormatException: $e');
-    return null;
-  } catch (e) {
-    print('Unexpected error: $e');
-    return null;
+  } else {
+    throw Exception(
+        'Failed to get response from server: ${response.statusCode}');
   }
 }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mac_desktop/chat_model.dart';
-import 'package:mac_desktop/chat_screen.dart'; // Add this line
-import 'package:mac_desktop/saved_chat.dart'; // Add this line
+import 'package:mac_desktop/chat_screen.dart';
 import 'package:path_provider/path_provider.dart'; // Add this line
 import 'dart:io'; // Add this line
 import 'dart:convert'; // Add this line
@@ -12,7 +11,7 @@ void main() {
 
 class MyApp extends StatelessWidget {
   MyApp({super.key});
-  List<ChatMessage> chathistory = [];
+  List<ChatMessage>? chathistory = [];
 
   updateChatHistory(List<ChatMessage> messages) {
     chathistory = messages;
@@ -31,18 +30,20 @@ class MyApp extends StatelessWidget {
             actions: [
               IconButton(
                   onPressed: () {
-                    saveChat(chathistory);
+                    if (chathistory != null) {
+                      saveChat(chathistory!);
+                    }
                   },
                   icon: Icon(Icons.save)),
               IconButton(
                   onPressed: () async {
-                    List<ChatMessage> history = await fetchChatHistory();
-                    updateChatHistory(history);
+                    List<SavedChat> history = await readLocalHistory();
+                    // Handle the loaded history as needed
                   },
                   icon: Icon(Icons.refresh))
             ],
           ),
-          body: ChatScreen(updateHistory: updateChatHistory)),
+          body: ChatScreen(updateHistory: updateChatHistory, savedChats: [])),
     );
   }
 
@@ -50,25 +51,27 @@ class MyApp extends StatelessWidget {
     final directory = await getApplicationDocumentsDirectory();
     final id = DateTime.now().millisecondsSinceEpoch.toString();
     final file = File('${directory.path}/chat_history_$id.json');
-    final savedChat = SavedChat(
-      id: id,
-      name: 'Chat $id',
-      chatMessages: chatHistory,
-      time: DateTime.now().toIso8601String(),
-    );
+    final savedChat =
+        SavedChat(name: 'chat_history_$id', messages: chatHistory);
+
     await file.writeAsString(jsonEncode(savedChat.toJson()));
     print("Chat history saved to ${file.path}");
   }
 
-  Future<List<ChatMessage>> fetchChatHistory() async {
+  Future<List<SavedChat>> readLocalHistory() async {
+    final List<SavedChat> savedChats = [];
     final directory = await getApplicationDocumentsDirectory();
-    final file = File('${directory.path}/chat_history.txt');
-    if (await file.exists()) {
-      final chatData = await file.readAsString();
-      final savedChat = SavedChat.fromJson(jsonDecode(chatData));
-      return savedChat.chatMessages;
-    } else {
-      return [];
-    }
+    final files = directory.listSync();
+    return Future.wait(files.map((file) async {
+      if (file is File && file.path.endsWith('.json')) {
+        final contents = await file.readAsString();
+        if (contents.isNotEmpty) {
+          final savedChat = SavedChat.fromJson(jsonDecode(contents));
+          if (savedChat != null) {
+            savedChats.add(savedChat);
+          }
+        }
+      }
+    })).then((_) => savedChats);
   }
 }

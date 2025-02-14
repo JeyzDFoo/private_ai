@@ -36,3 +36,27 @@ class ChatMessage {
     }).toList();
   }
 }
+
+class SavedChat {
+  String name;
+  List<ChatMessage> messages;
+
+  SavedChat({required this.name, required this.messages});
+
+  factory SavedChat.fromJson(Map<String, dynamic> json) {
+    return SavedChat(
+      name: json['name'] as String,
+      messages: (json['messages'] as List<dynamic>?)
+              ?.map((e) => ChatMessage.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'messages': messages.map((e) => e.toJson()).toList(),
+    };
+  }
+}
