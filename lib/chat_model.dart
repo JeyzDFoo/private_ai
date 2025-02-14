@@ -1,3 +1,5 @@
+import 'package:intl/intl.dart';
+
 class ChatMessage {
   final String role;
   final String content;
@@ -38,10 +40,12 @@ class ChatMessage {
 }
 
 class SavedChat {
+  String? uid;
   String name;
   List<ChatMessage> messages;
 
-  SavedChat({required this.name, required this.messages});
+  SavedChat({required this.name, required this.messages, String? uid})
+      : uid = uid ?? generateUID();
 
   factory SavedChat.fromJson(Map<String, dynamic> json) {
     return SavedChat(
@@ -50,6 +54,7 @@ class SavedChat {
               ?.map((e) => ChatMessage.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
+      uid: json['uid'] as String?,
     );
   }
 
@@ -57,6 +62,11 @@ class SavedChat {
     return {
       'name': name,
       'messages': messages.map((e) => e.toJson()).toList(),
+      'uid': uid,
     };
   }
+}
+
+String generateUID() {
+  return DateFormat('yyyy-MMM-dd-HH-mm-ss').format(DateTime.now());
 }
