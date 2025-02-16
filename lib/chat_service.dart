@@ -24,7 +24,7 @@ Future<void> sendMessageToServer(
       .toList();
 
   request.body = jsonEncode({
-    'model': 'llama3.2',
+    'model': "deepseek-r1:8b", //'llama3.2',
     'messages': messageList,
   });
 

@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:mac_desktop/chat_model.dart';
 import 'package:mac_desktop/chat_screen.dart';
 import 'package:mac_desktop/disk_operations.dart';
-import 'package:path_provider/path_provider.dart'; // Add this line
-import 'dart:io'; // Add this line
-import 'dart:convert'; // Add this line
 
 void main() {
   runApp(MyApp());
